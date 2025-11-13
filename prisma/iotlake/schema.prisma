@@ -199,20 +199,6 @@ model EquipmentTag {
   @@map("equipment_tags")
 }
 
-model EquipmentData {
-  id          String @id @default(cuid()) @db.VarChar(40)
-  equipmentId String @map("equipment_id") @db.VarChar(40)
-  data        Json
-
-  createdAt DateTime  @default(now()) @map("created_at")
-  updatedAt DateTime? @updatedAt @map("updated_at")
-  deletedAt DateTime? @map("deleted_at")
-
-  @@index([equipmentId, createdAt])
-  @@index([createdAt, equipmentId])
-  @@map("equipment_data")
-}
-
 model ServiceToken {
   token          String   @id @default(cuid()) @db.VarChar(40)
   description    String
