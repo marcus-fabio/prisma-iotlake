@@ -1,0 +1,472 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../node_modules/.prisma/client/iotlake"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "rhel-openssl-1.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+enum AnalysisStatus {
+  PENDING
+  RUNNING
+  SUCCESS
+  FAILED
+  ERROR
+}
+
+model DeviceType {
+  id String @id @default(cuid()) @db.VarChar(40)
+
+  name               String  @unique @db.VarChar(50)
+  params             Json?
+  parserEnabled      Boolean @map("parser_enabled")
+  code               String? @db.Text
+  codeCurrentVersion Int?    @map("code_current_version")
+  codeHash           String? @map("code_hash") @db.VarChar(100)
+
+  varToStoreLastValue Json? @map("var_to_store_lastvalue") // TODO: It should be at Application
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  networkID                String                    @map("network_id") @db.VarChar(40)
+  network                  Network                   @relation(fields: [networkID], references: [id])
+  deviceTypeParserVersions DeviceTypeParserVersion[]
+  devices                  Device[]
+
+  @@index([name])
+  @@map("device_types")
+}
+
+model DeviceTypeParserVersion {
+  id String @id @default(cuid()) @db.VarChar(40)
+
+  code    String @db.Text
+  version Int    @map("code_version")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  deviceTypeID String     @map("device_type_id") @db.VarChar(40)
+  deviceType   DeviceType @relation(fields: [deviceTypeID], references: [id], onDelete: Cascade)
+
+  @@map("device_types_parser_versions")
+}
+
+model Network {
+  id String @id @default(cuid()) @db.VarChar(40)
+
+  name               String  @unique @db.VarChar(50)
+  params             Json?
+  parserEnabled      Boolean @map("parser_enabled")
+  code               String? @db.Text
+  codeCurrentVersion Int?    @map("code_current_version")
+  codeHash           String? @map("code_hash") @db.VarChar(100)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  networkTypeID         String                 @map("network_type_id") @db.VarChar(40)
+  networkType           NetworkType            @relation(fields: [networkTypeID], references: [id])
+  deviceTypes           DeviceType[]
+  networkParserVersions NetworkParserVersion[]
+
+  @@index([name])
+  @@map("networks")
+}
+
+model NetworkParserVersion {
+  id String @id @default(cuid()) @db.VarChar(40)
+
+  code    String @db.Text
+  version Int    @map("code_version")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  networkID String  @map("network_id") @db.VarChar(40)
+  network   Network @relation(fields: [networkID], references: [id], onDelete: Cascade)
+
+  @@map("networks_parser_versions")
+}
+
+model NetworkType {
+  id          String @id @db.VarChar(40)
+  description String
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  networks Network[]
+
+  @@map("network_types")
+}
+
+model Device {
+  id String @id @default(cuid()) @db.VarChar(40)
+
+  name               String  @db.VarChar(50)
+  params             Json?
+  parserEnabled      Boolean @map("parser_enabled")
+  code               String? @db.Text
+  codeCurrentVersion Int?    @map("code_current_version")
+  codeHash           String? @map("code_hash") @db.VarChar(100)
+  radioSerial        String  @map("radio_serial") @db.VarChar(40)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  deviceTypeID         String                @map("device_type_id") @db.VarChar(40)
+  deviceType           DeviceType            @relation(fields: [deviceTypeID], references: [id])
+  deviceParserVersions DeviceParserVersion[]
+  equipment            Equipment?            @relation(fields: [equipmentID], references: [id], onDelete: SetNull)
+  equipmentID          String?               @map("equipment_id") @db.VarChar(40)
+
+  @@index([name])
+  @@index([radioSerial])
+  @@index([deviceTypeID, equipmentID, radioSerial])
+  @@index([equipmentID, deviceTypeID, radioSerial])
+  @@index([deviceTypeID, radioSerial])
+  @@index([equipmentID, radioSerial])
+  @@map("devices")
+}
+
+model DeviceParserVersion {
+  id String @id @default(cuid()) @db.VarChar(40)
+
+  code    String @db.Text
+  version Int    @map("code_version")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  deviceID String @map("device_id") @db.VarChar(40)
+  device   Device @relation(fields: [deviceID], references: [id], onDelete: Cascade)
+
+  @@map("devices_parser_versions")
+}
+
+model Equipment {
+  id            String  @id @default(cuid()) @db.VarChar(40)
+  name          String  @db.VarChar(50)
+  description   String
+  applicationId String? @map("application_id") @db.VarChar(40)
+
+  lastValues    Json?     @map("last_values")
+  lastInputDate DateTime? @map("last_input_date")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  devices       Device[]
+  equipmentTags EquipmentTag[]
+  analysisLogs  AnalysisLog[]
+  // @@unique([applicationId, name, deletedAt])
+
+  @@index([name])
+  @@index([applicationId, name])
+  @@index([createdAt])
+  @@map("equipments")
+}
+
+model EquipmentTag {
+  id String @id @default(cuid()) @db.VarChar(40)
+
+  equipment   Equipment? @relation(fields: [equipmentID], references: [id], onDelete: Cascade)
+  equipmentID String?    @map("equipment_id") @db.VarChar(40) // TODO: change from ID to Id
+
+  key   String
+  value String
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([equipmentID, key, value])
+  @@index([key, equipmentID, value])
+  @@index([key, value, equipmentID])
+  @@index([createdAt])
+  @@map("equipment_tags")
+}
+
+model EquipmentData {
+  id          String @id @default(cuid()) @db.VarChar(40)
+  equipmentId String @map("equipment_id") @db.VarChar(40)
+  data        Json
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([equipmentId, createdAt])
+  @@index([createdAt, equipmentId])
+  @@map("equipment_data")
+}
+
+model ServiceToken {
+  token          String   @id @default(cuid()) @db.VarChar(40)
+  description    String
+  expirationDate DateTime @map("expiration_date")
+  enabled        Boolean  @default(true)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@map("service_tokens")
+}
+
+// TODO Adicionar o campo description
+model TriggerType {
+  id          String @id @default(cuid()) @db.VarChar(40)
+  name        String @db.VarChar(50)
+  description String @db.VarChar(255)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  actions Action[]
+
+  @@index([name])
+  @@map("trigger_types")
+}
+
+// TODO Adicionar o campo description
+model ActionType {
+  id          String @id @default(cuid()) @db.VarChar(40)
+  name        String @db.VarChar(50)
+  description String @db.VarChar(255)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  actions Action[]
+
+  @@index([name])
+  @@map("action_types")
+}
+
+// TODO Adicionar o campo name e description
+model Action {
+  id            String  @id @default(cuid()) @db.VarChar(40)
+  name          String  @db.VarChar(40)
+  description   String  @db.VarChar(255)
+  applicationId String  @map("application_id") @db.VarChar(40)
+  triggerTypeId String  @map("trigger_type_id") @db.VarChar(40)
+  actionTypeId  String  @map("action_type_id") @db.VarChar(40)
+  triggerConfig Json    @map("trigger_config")
+  actionConfig  Json    @map("action_config")
+  enabled       Boolean
+
+  triggerType TriggerType @relation(fields: [triggerTypeId], references: [id])
+  actionType  ActionType  @relation(fields: [actionTypeId], references: [id])
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  @@index([applicationId, triggerTypeId, actionTypeId])
+  @@index([applicationId, actionTypeId, triggerTypeId])
+  @@map("actions")
+}
+
+model Analysis {
+  id             String  @id @default(cuid()) @db.VarChar(40)
+  name           String  @db.VarChar(50)
+  code           String? @db.Text
+  envVars        Json?   @map("env_vars")
+  currentVersion Int?    @map("current_version")
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  analysisVersions AnalysisVersion[]
+  analysisLogs     AnalysisLog[]
+
+  @@unique([name])
+  @@map("analyses")
+}
+
+model AnalysisVersion {
+  id         String @id @default(cuid()) @db.VarChar(40)
+  code       String @db.Text
+  version    Int    @map("version")
+  analysisId String @map("analysis_id") @db.VarChar(40)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  analysis Analysis @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+
+  @@unique([analysisId, version])
+  @@map("analysis_versions")
+}
+
+model AnalysisLog {
+  id          String         @id @default(cuid()) @db.VarChar(40)
+  result      Json?
+  log         String?        @db.Text
+  status      AnalysisStatus
+  analysisId  String         @map("analysis_id") @db.VarChar(40)
+  executionId String         @map("execution_id") @db.VarChar(100)
+  equipmentId String?        @map("equipment_id") @db.VarChar(40)
+
+  createdAt DateTime  @default(now()) @map("created_at")
+  updatedAt DateTime? @updatedAt @map("updated_at")
+  deletedAt DateTime? @map("deleted_at")
+
+  analysis  Analysis   @relation(fields: [analysisId], references: [id], onDelete: Cascade)
+  equipment Equipment? @relation(fields: [equipmentId], references: [id], onDelete: SetNull)
+
+  @@unique([executionId])
+  @@map("analysis_logs")
+}
+
+// Exemplos de JSON para triggerConfig e actionConfig
+// triggerConfig e actionConfig são campos do tipo JSON que armazenam a configuração de um acionador e uma ação, respectivamente.
+
+// triggerConfig json format example:
+// {
+//   "type": "VARIABLE",
+//   "variable": "temperature",
+//   "condition": {
+//     "operator": "gt", // it can be 'gt', 'lt', 'gte', 'lte', 'eq', 'neq', 'any'
+//     "value": 30
+//   }
+// }
+
+// actionConfig json format example for HTTP action:
+// {
+//   "type": "HTTP",
+//   "method": "POST",
+//   "url": "https://example.com/api/alert",
+//   "headers": {
+//     "Content-Type": "application/json",
+//     "Authorization": "Bearer token"
+//   },
+//   "body": {
+//     "someProperty": "Temperature exceeded threshold",
+//     "condition": {   // appended to body by default
+//       "operator": "gt",
+//       "value": 30
+//     }
+//     "variable": "temperature", // appended to body by default
+//     "value": 35 // appended to body by default
+//   }
+//   "params": {
+//     "key1": "value1"  // query params
+//     "key2": 0  // query params
+//   }
+// }
+
+// actionConfig json format example for SQS action:
+// {
+//   "type": "SQS",
+//   "region": "us-east-1",
+//   "credentials": {
+//     "accessKeyId": "aws access key",
+//     "secretAccessKey": "aws secret key"
+//   },
+//   "queueUrl": "http://queueurl",
+//   "message": "SQS message"
+// }
+
+// actionConfig json format example for MQTT action:
+// {
+//   "type": "MQTT",
+//   "broker": "mqtt://broker.hivemq.com",
+//   "topic": "test/topic",
+//   "message": {
+//     "temperature": 25,
+//     "humidity": 60
+//   }
+// }
+
+// actionConfig JSON format example for EMAIL action:
+// {
+//   "type": "EMAIL",
+//   "host": "smtp.example.com",
+//   "port": 587,
+//   "secure": false, // true for 465, false for other ports
+//   "auth": {
+//     "user": "your-email@example.com",
+//     "pass": "your-email-password"
+//   },
+//   "from": "your-email@example.com", // Optional, defaults to auth.user
+//   "to": "recipient@example.com",
+//   "subject": "Test Email",
+//   "text": "Hello, this is a test email.",
+//   "html": "<p>Hello, this is a <strong>test email</strong>.</p>"
+// }
+
+// actionConfig JSON format example for SMS action:
+// {
+//   "type": "SMS",
+//   "provider": "twilio", // e.g., 'twilio', 'nexmo'
+//   "credentials": {
+//     "accountSid": "your_account_sid",
+//     "authToken": "your_auth_token"
+//   },
+//   "from": "+1234567890", // sender number
+//   "to": "+0987654321",   // recipient number
+//   "message": "Hello, this is a test SMS."
+// }
+
+// actionConfig JSON format example for PUSH action:
+// {
+//   "type": "PUSH",
+//   "provider": "firebase", // e.g., 'firebase', 'onesignal'
+//   "credentials": {
+//     "apiKey": "your_api_key",
+//     "projectId": "your_project_id"
+//   },
+//   "to": "device_token", // recipient device token
+//   "message": {
+//     "title": "Test Push Notification",
+//     "body": "Hello, this is a test push notification."
+//   }
+// }
+
+// actionConfig JSON format example for DATABASE action:
+// {
+//   "type": "DATABASE",
+//   "client": "mysql", // e.g., 'pg' for PostgreSQL, 'sqlite3' for SQLite
+//   "connection": {
+//     "host": "localhost",
+//     "user": "dbuser",
+//     "password": "dbpassword",
+//     "database": "dbname"
+//   },
+//   "query": "SELECT * FROM users WHERE id = ?",
+//   "params": [1]
+// }
+
+// actionConfig JSON format example for ANALYSIS action:
+// {
+//   "type": "ANALYSIS",
+//   "analysisId": "123456789",
+//   "environment": [
+//     {"key": "variable1", "value": "value1"},
+//     {"key": "variable2", "value": 42}
+//   ]
+// }
+
+// actionConfig JSON format example for CUSTOM action:
+// {
+//   "type": "CUSTOM",
+//   "code": "JS code text here", // code to be executed
+// }

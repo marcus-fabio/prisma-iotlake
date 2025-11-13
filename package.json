@@ -1,0 +1,36 @@
+{
+  "name": "prisma-iotlake",
+  "version": "1.0.0",
+  "description": "Shared Prisma schemas for IoTLake and Bucket databases",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "setup": "ts-node scripts/setup.ts",
+    "seed": "ts-node scripts/seed.ts",
+    "generate:iotlake": "prisma generate --schema=prisma/iotlake/schema.prisma",
+    "generate:bucket": "prisma generate --schema=prisma/bucket/schema.prisma",
+    "generate": "npm run generate:iotlake && npm run generate:bucket",
+    "migrate:iotlake": "prisma migrate dev --schema=prisma/iotlake/schema.prisma",
+    "migrate:bucket": "prisma migrate dev --schema=prisma/bucket/schema.prisma",
+    "migrate": "npm run migrate:iotlake && npm run migrate:bucket",
+    "deploy:iotlake": "prisma migrate deploy --schema=prisma/iotlake/schema.prisma",
+    "deploy:bucket": "prisma migrate deploy --schema=prisma/bucket/schema.prisma",
+    "deploy": "npm run deploy:iotlake && npm run deploy:bucket",
+    "postinstall": "npm run generate && tsc"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "@prisma/client": "^6.10.1",
+    "@types/node": "^24.0.6",
+    "prisma": "^6.10.1",
+    "tsx": "^4.20.3",
+    "typescript": "^5.8.3"
+  },
+  "devDependencies": {
+    "@aws-sdk/client-secrets-manager": "^3.848.0",
+    "ts-node": "^10.9.2"
+  }
+}

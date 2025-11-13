@@ -1,0 +1,33 @@
+generator client {
+  provider      = "prisma-client-js"
+  output        = "../../node_modules/.prisma/client/bucket"
+  binaryTargets = ["native", "rhel-openssl-3.0.x", "rhel-openssl-1.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("BUCKET_URL")
+}
+
+model EquipmentData {
+  id           String                @id @db.VarChar(30)
+  equipment_id String?               @db.VarChar(40)
+  device_id    String?               @db.VarChar(40)
+  date         DateTime?             @db.DateTime(0)
+  time         String?               @db.VarChar(40)
+  group        String?               @db.VarChar(40)
+  variable     String?               @db.VarChar(50)
+  value        String?               @db.Text
+  location     Unsupported("point")?
+  metadata     Json?
+  created_at   DateTime              @default(now()) @db.DateTime(0)
+  updated_at   DateTime              @default(now()) @db.Timestamp(0)
+
+  @@index([created_at, variable], map: "idx_created_at_variable")
+  @@index([date, variable], map: "idx_date_variable")
+  @@index([device_id, date, variable], map: "idx_device_date_variable")
+  @@index([time, variable], map: "idx_group_variable")
+  @@index([variable, date], map: "idx_variable_date")
+  @@fulltext([variable, value], map: "idx_variable_value")
+  @@map("equipmentData")
+}

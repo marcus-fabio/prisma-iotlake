@@ -1,0 +1,28 @@
+default:
+  image: node:20
+
+stages:
+  - deploy
+
+deploy:
+  stage: deploy
+  script:
+    - echo "Deploy in stage '$DEPLOY_STAGE'"  
+    - npm install
+    - npm run setup
+    - npm run deploy
+    - npm run seed
+  rules:
+    - if: $CI_COMMIT_BRANCH == "devel"
+      variables:
+        DEPLOY_STAGE: dev
+
+    - if: $CI_COMMIT_BRANCH == "qa"
+      variables:
+        DEPLOY_STAGE: qa
+
+    # - if: $CI_COMMIT_BRANCH == "master"
+    #   variables:
+    #     DEPLOY_STAGE: prod
+  environment:
+    name: $DEPLOY_STAGE
